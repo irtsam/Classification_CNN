@@ -1,0 +1,225 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Mar 26 15:15:41 2018
+
+@author: ighazi
+"""
+import torch
+import torch.nn as nn
+import torch.nn.functional as f
+import numpy as np
+import torch.optim as optim
+from torch.autograd import Variable
+import torchvision
+import torchvision.transforms as transforms
+import matplotlib.pyplot as plt
+import time
+import shutil
+from models.Net import CNN
+
+
+
+# functions to show an image
+
+
+def imshow(img):
+    img = img / 2 + 0.5     # unnormalize
+    npimg = img.numpy()
+    plt.imshow(np.transpose(npimg, (1, 2, 0)))
+
+
+# get some random training images
+
+def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
+    torch.save(state, filename)
+    if is_best:
+        shutil.copyfile(filename, 'model_best.pth.tar')
+
+"""This code is for creating a convolutional neural network classifier that 
+will work with Pascal VOC to classify our images"""
+
+from models import Net
+"""Create a neural net object and then feedforward it by using the net(x) 
+procedure. This works as function is one of the abstract functions for nn.module
+superclass we inherited"""
+global x,y
+
+transform = transforms.Compose(
+    [transforms.ToTensor(),
+     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+
+trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
+                                        download=True, transform=transform)
+
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
+                                          shuffle=True, num_workers=2)
+
+testset = torchvision.datasets.CIFAR10(root='./data', train=False,
+                                       download=True, transform=transform)
+testloader = torch.utils.data.DataLoader(testset, batch_size=4,
+                                         shuffle=False, num_workers=2)
+start_time= time.time()
+classes = ('plane', 'car', 'bird', 'cat',
+           'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+
+
+dataiter = iter(trainloader)
+images, labels = dataiter.next()
+net = CNN()
+print("Net initialized")
+# show images
+imshow(torchvision.utils.make_grid(images))
+# print labels
+print(' '.join('%5s' % classes[labels[j]] for j in range(4)))
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.SGD(net.parameters(), lr=0.0001, momentum=0.5,weight_decay=1e-2)
+
+
+"""Training our network"""
+
+for epoch in range(200):  # loop over the dataset multiple times
+
+    running_loss = 0.0
+    for i, data in enumerate(trainloader, 0):
+        # get the inputs
+        inputs, labels = data
+
+        # wrap them in Variable
+        inputs, labels = Variable(inputs), Variable(labels)
+
+        # zero the parameter gradients
+        optimizer.zero_grad()
+        
+        #net=nn.Dropout(p=0.5, inplace= True)
+        # forward + backward + optimize
+        outputs = net(inputs)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+        # print statistics
+        running_loss += loss.data[0]
+        if i % 2000 == 1999:    # print every 2000 mini-batches
+            print('[%d, %5d] loss: %.3f' %
+                  (epoch + 1, i + 1, running_loss / 2000))
+            running_loss = 0.0
+
+print('Finished Training')
+
+
+print("Saving our model")
+
+save_checkpoint({
+            'epoch': epoch + 1,
+            'arch': CNN,
+            'state_dict': net.state_dict(),
+            'best_prec1': running_loss,
+            'optimizer' : optimizer.state_dict(),
+}, is_best=True)
+
+
+
+
+
+"""Testing our data"""
+
+correct = 0
+total = 0
+for data in trainloader:
+    images, labels = data
+    outputs = net(Variable(images))
+    _, predicted = torch.max(outputs.data, 1)
+    total += labels.size(0)
+    correct += (predicted == labels).sum()
+
+print('Accuracy of the network on the 10000 test images: %d %%' % (
+    100 * correct / total))
+
+
+"""Classes Prediction Accuracy"""
+class_correct = list(0. for i in range(10))
+class_total = list(0. for i in range(10))
+for data in testloader:
+    images, labels = data
+    outputs = net(Variable(images))
+    _, predicted = torch.max(outputs.data, 1)
+    c = (predicted == labels).squeeze()
+    for i in range(4):
+        label = labels[i]
+        class_correct[label] += c[i]
+        class_total[label] += 1
+
+
+for i in range(10):
+    print('Accuracy of %5s : %2d %%' % (
+        classes[i], 100 * class_correct[i] / class_total[i]))
+
+
+tot_time= time.time()- start_time
+print(tot_time)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""
+#Defining a random input
+x= Variable(torch.rand(1,1,32,32), requires_grad= True)
+out= net(x)
+print(net)
+parameters= list(net.parameters())
+
+print(parameters[0])
+
+g= torch.randn(1,10)
+net.zero_grad()
+out.backward(torch.randn(1,10))
+print(g)
+        
+Backpropagation"""
+
+"""Backpropagation practice
+input = Variable(torch.randn(1, 1, 32, 32))
+out = net(input)
+print(out)
+
+net.zero_grad()
+out.backward(torch.randn(1, 10))
+print(out.grad)
+target = Variable(torch.arange(1, 11))
+
+optimizer = optim.SGD(net.parameters(), lr=0.01)
+
+# in your training loop:
+optimizer.zero_grad()   # zero the gradient buffers
+output = net(input)
+criterion = nn.MSELoss()
+loss = criterion(output, target)
+loss.backward(retain_graph=True)
+print(loss)
+optimizer.step() 
+loss.backward()
+print(loss)
+optimizer.step()
+"""
