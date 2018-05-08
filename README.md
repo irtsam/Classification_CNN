@@ -1,7 +1,11 @@
-# Pytorch_Tutorials
+# Pytorch_Classification
 
-This repository contains Pytorch tutorials files. The following files are contained:
+This repository contains CNN files for classification of Cifar10 dataset. The following files are contained:
 
-1. Pytorch Tutorial: Basics of pytorch variable, torch etc.
-2. Pytorch_1: Pytorch autograd, and variable basics.
-3. CNN_TEST: Pytorch code for training, saving and testing a neural network.
+1. Models/CNN: Definition of the CNN.
+2. Pytorch_Train_vers1: Training and saving the model code.
+3. CNN_TEST: Pytorch code for loading saved model and testing on test dataset.
+
+The following are required to run the project:
+1. Pytorch
+2. Matplotlib
